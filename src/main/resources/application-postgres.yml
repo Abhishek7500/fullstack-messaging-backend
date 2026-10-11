@@ -2,9 +2,9 @@
 # Then set SPRING_DATASOURCE_URL / USERNAME / PASSWORD or edit below.
 spring:
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/messenger}
-    username: ${SPRING_DATASOURCE_USERNAME:messenger}
-    password: ${SPRING_DATASOURCE_PASSWORD:messenger}
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://://supabase.com}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres.zgjjrwbzzkaawpmaerir}
+    password: ${SPRING_DATASOURCE_PASSWORD:NowWeAreGoing@1026}
     driver-class-name: org.postgresql.Driver
   h2:
     console:
