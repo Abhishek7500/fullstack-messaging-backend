@@ -1,0 +1,91 @@
+-- =============================================================================
+-- Liquibase changelog: TimeCapsule & Legacy Messaging
+-- =============================================================================
+-- Enable Liquibase by adding org.liquibase:liquibase-core to the backend and
+-- setting spring.liquibase.change-log=classpath:db/changelog/db.changelog-master.yaml
+-- (and switching spring.jpa.hibernate.ddl-auto to `validate`/`none`). This file
+-- is the reviewable, version-controlled counterpart to V1__timecapsule_schema.sql.
+-- =============================================================================
+databaseChangeLog:
+  - changeSet:
+      id: 001-alter-messages-media-capsule
+      author: timecapsule
+      comment: "Add rich-media + time-lock columns to messages"
+      changes:
+        - addColumn:
+            tableName: messages
+            columns:
+              - column: { name: message_type, type: varchar(16), defaultValue: "TEXT", constraints: { nullable: false } }
+              - column: { name: media_url,    type: varchar(1024) }
+              - column: { name: is_locked,    type: boolean, defaultValueBoolean: false, constraints: { nullable: false } }
+              - column: { name: unlock_at,    type: timestamp with time zone }
+        - dropNotNullConstraint:
+            tableName: messages
+            columnName: content
+            columnDataType: varchar(2000)
+        - createIndex:
+            indexName: idx_messages_locked_unlock
+            tableName: messages
+            columns:
+              - column: { name: is_locked }
+              - column: { name: unlock_at }
+
+  - changeSet:
+      id: 002-create-reactions
+      author: timecapsule
+      comment: "Emoji reactions with anti-spam unique constraint"
+      changes:
+        - createTable:
+            tableName: reactions
+            columns:
+              - column: { name: id, type: bigint, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: message_id, type: bigint, constraints: { nullable: false } }
+              - column: { name: user_id, type: bigint, constraints: { nullable: false } }
+              - column: { name: reaction_type, type: varchar(16), constraints: { nullable: false } }
+              - column: { name: created_at, type: "timestamp with time zone", defaultValueComputed: "NOW()", constraints: { nullable: false } }
+        - addForeignKeyConstraint:
+            baseTableName: reactions
+            baseColumnNames: message_id
+            referencedTableName: messages
+            referencedColumnNames: id
+            constraintName: fk_reactions_message
+            onDelete: CASCADE
+        - addForeignKeyConstraint:
+            baseTableName: reactions
+            baseColumnNames: user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_reactions_user
+            onDelete: CASCADE
+        - addUniqueConstraint:
+            tableName: reactions
+            columnNames: message_id, user_id, reaction_type
+            constraintName: uq_reaction_message_user_type
+        - createIndex:
+            indexName: idx_reactions_message
+            tableName: reactions
+            columns:
+              - column: { name: message_id }
+
+  - changeSet:
+      id: 003-create-subscriptions
+      author: timecapsule
+      comment: "Tier entitlements for users or groups (polymorphic entity_id)"
+      changes:
+        - createTable:
+            tableName: subscriptions
+            columns:
+              - column: { name: id, type: bigint, autoIncrement: true, constraints: { primaryKey: true, nullable: false } }
+              - column: { name: entity_id, type: bigint, constraints: { nullable: false } }
+              - column: { name: tier_type, type: varchar(24), constraints: { nullable: false } }
+              - column: { name: expires_at, type: "timestamp with time zone" }
+              - column: { name: created_at, type: "timestamp with time zone", defaultValueComputed: "NOW()", constraints: { nullable: false } }
+        - addCheckConstraint:
+            tableName: subscriptions
+            constraintName: chk_subscription_tier
+            checkConstraint: "tier_type IN ('FREE_PERSONAL', 'PAID_FAMILY')"
+        - createIndex:
+            indexName: idx_subscriptions_entity
+            tableName: subscriptions
+            columns:
+              - column: { name: entity_id }

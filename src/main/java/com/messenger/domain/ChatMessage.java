@@ -2,6 +2,8 @@ package com.messenger.domain;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -29,8 +31,25 @@ public class ChatMessage {
     @JoinColumn(name = "sender_id")
     private UserAccount sender;
 
-    @Column(nullable = false, length = 2000)
+    /** Nullable because media-only or capsule messages may carry no text. */
+    @Column(length = 2000)
     private String content;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "message_type", nullable = false, length = 16)
+    private MessageType messageType = MessageType.TEXT;
+
+    /** Storage URL / key for PHOTO and VIDEO payloads. Null for text/capsule. */
+    @Column(name = "media_url", length = 1024)
+    private String mediaUrl;
+
+    /** True for time-capsule messages whose content is hidden until {@link #unlockAt}. */
+    @Column(name = "is_locked", nullable = false)
+    private boolean locked = false;
+
+    /** When the capsule becomes readable. Null for non-capsule messages. */
+    @Column(name = "unlock_at")
+    private Instant unlockAt;
 
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
@@ -40,6 +59,17 @@ public class ChatMessage {
         if (createdAt == null) {
             createdAt = Instant.now();
         }
+        if (messageType == null) {
+            messageType = MessageType.TEXT;
+        }
+    }
+
+    /**
+     * @return true when the message is currently sealed, i.e. locked and the
+     *         unlock time is still in the future relative to {@code now}.
+     */
+    public boolean isSealed(Instant now) {
+        return locked && unlockAt != null && unlockAt.isAfter(now);
     }
 
     public Long getId() {
@@ -74,6 +104,38 @@ public class ChatMessage {
         this.content = content;
     }
 
+    public MessageType getMessageType() {
+        return messageType;
+    }
+
+    public void setMessageType(MessageType messageType) {
+        this.messageType = messageType;
+    }
+
+    public String getMediaUrl() {
+        return mediaUrl;
+    }
+
+    public void setMediaUrl(String mediaUrl) {
+        this.mediaUrl = mediaUrl;
+    }
+
+    public boolean isLocked() {
+        return locked;
+    }
+
+    public void setLocked(boolean locked) {
+        this.locked = locked;
+    }
+
+    public Instant getUnlockAt() {
+        return unlockAt;
+    }
+
+    public void setUnlockAt(Instant unlockAt) {
+        this.unlockAt = unlockAt;
+    }
+
     public Instant getCreatedAt() {
         return createdAt;
     }
@@ -82,3 +144,4 @@ public class ChatMessage {
         this.createdAt = createdAt;
     }
 }
+
