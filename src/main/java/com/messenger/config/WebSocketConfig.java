@@ -32,11 +32,13 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
+        // Updated to use setAllowedOriginPatterns("*") to allow Vercel origins dynamically
         registry.addEndpoint("/ws")
-                .setAllowedOrigins(corsProperties.origins())
+                .setAllowedOriginPatterns("*")
                 .withSockJS();
+                
         registry.addEndpoint("/ws")
-                .setAllowedOrigins(corsProperties.origins());
+                .setAllowedOriginPatterns("*");
     }
 
     @Override
