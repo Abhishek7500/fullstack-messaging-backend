@@ -78,4 +78,30 @@ public final class ChatEvents {
             long sizeBytes
     ) {
     }
+
+    /** A Tic-Tac-Toe coordinate published over STOMP; row/column -1 resets the board. */
+    public record GameMovePayload(
+            @NotNull Long conversationId,
+            @NotNull Integer row,
+            @NotNull Integer column
+    ) {
+    }
+
+    /**
+     * Authoritative shared game state broadcast to
+     * {@code /topic/conversations/{id}/game} after every move so both clients
+     * render an identical board.
+     */
+    public record GameStateEvent(
+            Long conversationId,
+            List<List<String>> board,
+            boolean xIsNext,
+            String winner,
+            List<Integer> winLine,
+            Long lastMoveBy,
+            Long playerXId,
+            Long playerOId,
+            Instant updatedAt
+    ) {
+    }
 }

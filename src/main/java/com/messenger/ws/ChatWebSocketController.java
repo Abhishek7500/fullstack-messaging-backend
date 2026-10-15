@@ -2,6 +2,7 @@ package com.messenger.ws;
 
 import com.messenger.domain.ChatMessage;
 import com.messenger.domain.UserAccount;
+import com.messenger.dto.ChatEvents.GameMovePayload;
 import com.messenger.dto.ChatEvents.ReactionRequest;
 import com.messenger.dto.ChatEvents.SendMessagePayload;
 import com.messenger.dto.ChatEvents.TypingEvent;
@@ -9,6 +10,7 @@ import com.messenger.dto.ChatEvents.TypingPayload;
 import com.messenger.dto.MessageDto;
 import com.messenger.security.SecurityUtils;
 import com.messenger.service.ConversationService;
+import com.messenger.service.GameService;
 import com.messenger.service.ReactionService;
 import jakarta.validation.Valid;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -23,15 +25,18 @@ public class ChatWebSocketController {
 
     private final ConversationService conversationService;
     private final ReactionService reactionService;
+    private final GameService gameService;
     private final SimpMessagingTemplate messagingTemplate;
 
     public ChatWebSocketController(
             ConversationService conversationService,
             ReactionService reactionService,
+            GameService gameService,
             SimpMessagingTemplate messagingTemplate
     ) {
         this.conversationService = conversationService;
         this.reactionService = reactionService;
+        this.gameService = gameService;
         this.messagingTemplate = messagingTemplate;
     }
 
@@ -70,5 +75,17 @@ public class ChatWebSocketController {
         UserAccount sender = SecurityUtils.fromPrincipal(principal);
         reactionService.toggle(sender, payload.messageId(), payload.reactionType());
     }
-}
 
+    /**
+     * Live multiplayer Tic-Tac-Toe move. The server validates participation,
+     * applies the move to the authoritative room board, and broadcasts the
+     * updated matrix to every subscriber of
+     * {@code /topic/conversations/{id}/game}.
+     */
+    @MessageMapping("/chat.gamemove")
+    public void gameMove(@Valid @Payload GameMovePayload payload, Principal principal) {
+        UserAccount sender = SecurityUtils.fromPrincipal(principal);
+        conversationService.requireParticipant(payload.conversationId(), sender.getId());
+        gameService.applyMove(payload, sender.getId());
+    }
+}
